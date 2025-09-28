@@ -9,7 +9,7 @@ terraform {
     bucket         = var.bucket
     key            = var.key
     region         = var.region
-    dynamodb_table = var.lock_table
+    dynamodb_table = "terraform-lock-table"
     encrypt        = true
 }
 }
