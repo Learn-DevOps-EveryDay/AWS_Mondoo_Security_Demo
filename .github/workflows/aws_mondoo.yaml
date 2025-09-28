@@ -29,42 +29,35 @@ on:
         options: ["true", "false"]
 
 jobs:
-  # Stage 1: Checkov Scan (Runs on Host Runner - No Docker Container)
+  # Stage 1: Checkov Scan
   checkov:
     if: ${{ github.event.inputs.checkovScan == 'true' }}
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-
       - name: Install Checkov
-        # Using 'pip' is standard after 'setup-python' has configured the PATH
         run: pip install checkov
-        
       - name: Create Reports Directory
         run: mkdir -p reports
-        
       - name: Run Checkov on all modules
-        # This now runs directly on the ubuntu runner and finds the path correctly
+        id: checkov_scan
         run: checkov -d terraform-project/ --output junitxml --output-file reports/checkov-report.xml
-        
       - name: Upload Checkov Report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: checkov-report
           path: reports/checkov-report.xml
-          
       - name: Publish Test Report
+        if: always()
         uses: mikepenz/action-junit-report@v4
         with:
           report_paths: 'reports/checkov-report.xml'
-
-# -----------------------------------------------------------------------------
 
   # Stage 2: Terraform Plan & Apply
   terraform:
@@ -74,37 +67,36 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-        
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.0
-          
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-          
       - name: Terraform Init
-        run: terraform -chdir=terraform-project init -backend-config=backend.tfvars 
-        
+        run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
       - name: Terraform Plan
         run: |
-          terraform -chdir=terraform-project plan -out=tfplan -lock=false
+          terraform -chdir=terraform-project plan -out=tfplan
           terraform -chdir=terraform-project show -no-color tfplan > terraform-project/plan-summary.txt
-          
       - name: Upload Terraform Plan Summary
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-summary
           path: terraform-project/plan-summary.txt
-          
+      - name: Wait for approval before apply
+        uses: trstringer/manual-approval@v1
+        with:
+          approvers: user1,user2
+          minimum-approvals: 1
+          issue-title: "Approve Terraform Apply"
+          issue-body: "Approve to apply Terraform changes to the **dev** environment."
       - name: Terraform Apply
         run: terraform -chdir=terraform-project apply -auto-approve tfplan
-
-# -----------------------------------------------------------------------------
 
   # Stage 3: Destroy
   destroy:
@@ -113,26 +105,27 @@ jobs:
     needs: [terraform]
     steps:
       - uses: actions/checkout@v4
-        
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.0
-          
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-          
       - name: Terraform Init
         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
-        
+      - name: Wait for approval before destroy
+        uses: trstringer/manual-approval@v1
+        with:
+          approvers: user1,user2
+          minimum-approvals: 1
+          issue-title: "Approve Terraform Destroy"
+          issue-body: "Approve to destroy Terraform resources in **dev**."
       - name: Terraform Destroy
         run: terraform -chdir=terraform-project destroy -auto-approve
-
-# -----------------------------------------------------------------------------
 
   # Stage 4: Mondoo Scan
   mondoo:
@@ -141,22 +134,18 @@ jobs:
     needs: [terraform]
     steps:
       - uses: actions/checkout@v4
-        
       - name: Install Mondoo (cnspec)
         run: curl -sSL https://get.mondoo.com | bash
-        
+      - name: Add cnspec to PATH
+        run: echo "$HOME/.mondoo/bin" >> $GITHUB_PATH
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # 🚨 NOTE: 'ueu-north-1' is not a standard AWS region.
-          # Replaced with a common region for demonstration. Use your correct region.
           aws-region: eu-north-1
-          
       - name: Run Mondoo Scan
         run: cnspec scan aws --bundles policies/custom-s3-sg.mql.yaml --output json > mondoo-report.json
-        
       - name: Upload Mondoo Report
         uses: actions/upload-artifact@v4
         with:
