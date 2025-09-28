@@ -65,6 +65,9 @@ module "s3" {
   tags        = local.tags
 }
 
+# Data sources
+data "aws_availability_zones" "available" {}
+
 # EC2
 module "ec2" {
   source        = "./modules/ec2"
