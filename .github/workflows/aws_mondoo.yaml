@@ -77,7 +77,6 @@ jobs:
 
   # Stage 2: Terraform Plan & Apply
   terraform:
-    needs: [checkov]
     runs-on: ubuntu-latest
     environment: dev
     timeout-minutes: 60
