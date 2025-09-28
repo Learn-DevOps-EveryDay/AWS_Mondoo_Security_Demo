@@ -133,6 +133,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Terraform Init
         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
+        
       # - name: Wait for approval before destroy
       #   uses: trstringer/manual-approval@v1
       #   with:
@@ -140,8 +141,8 @@ jobs:
       #     minimum-approvals: 1
       #     issue-title: "Approve Terraform Destroy"
       #     issue-body: "Approve to destroy Terraform resources in **dev**."
-      # - name: Terraform Destroy
-      #   run: terraform -chdir=terraform-project destroy -auto-approve
+      - name: Terraform Destroy
+        run: terraform -chdir=terraform-project destroy -auto-approve
 
   # Stage 4: Mondoo Scan
   mondoo_scan:
