@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Checkov
-        run: checkov -d terraform/ --output junitxml > checkov-report.xml
+        run: checkov -d terraform-project/ --output junitxml > checkov-report.xml
       - name: Upload Checkov Report
         uses: actions/upload-artifact@v4
         with:
@@ -65,16 +65,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}    
       - name: Terraform Init
-        run: terraform -chdir=terraform init -backend-config=backend.tfvars
+        run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
       - name: Terraform Plan
-        run: terraform -chdir=terraform plan -out=tfplan
+        run: terraform -chdir=terraform-project plan -out=tfplan
       - name: Upload plan
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
           path: terraform/tfplan
       - name: Terraform Apply
-        run: terraform -chdir=terraform apply -auto-approve tfplan
+        run: terraform -chdir=terraform-project apply -auto-approve tfplan
 
   # Stage 3: Destroy
   destroy:
@@ -94,9 +94,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}         
       - name: Terraform Init
-        run: terraform -chdir=terraform init -backend-config=backend.tfvars
+        run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
       - name: Terraform Destroy
-        run: terraform -chdir=terraform destroy -auto-approve
+        run: terraform -chdir=terraform-project destroy -auto-approve
 
   # Stage 4: Mondoo Scan
   mondoo:
