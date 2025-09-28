@@ -152,7 +152,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Mondoo (cnspec)
-        run: curl -sSL https://get.mondoo.com | bash
+        run: |
+            curl --retry 3 --retry-delay 10 -sSL https://releases.mondoo.com/debian/pubkey.gpg | gpg --dearmor --output /usr/share/keyrings/mondoo-archive-keyring.gpg
+            echo "deb [signed-by=/usr/share/keyrings/mondoo-archive-keyring.gpg] https://releases.mondoo.com/debian/ stable main" | tee /etc/apt/sources.list.d/mondoo.list && # export MONDOO_REGISTRATION_TOKEN="<YOUR_TOKEN_HERE>"
+            
+            apt update && apt install mondoo
       - name: Add cnspec to PATH
         run: echo "$HOME/.mondoo/bin" >> $GITHUB_PATH
       - name: Configure AWS credentials
