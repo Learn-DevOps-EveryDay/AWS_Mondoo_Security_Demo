@@ -40,7 +40,7 @@ jobs:
     - name: Run Checkov
       run: |
         mkdir -p reports
-        checkov -d terraform-project/ --output junitxml > reports/checkov-report.xml || true
+        checkov -d terraform-project/ --recursive --output junitxml > reports/checkov-report.xml || true
     - name: Upload Checkov Report
       uses: actions/upload-artifact@v4
       with:
