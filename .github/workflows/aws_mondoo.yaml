@@ -145,30 +145,77 @@ jobs:
         run: terraform -chdir=terraform-project destroy -auto-approve
 
   # Stage 4: Mondoo Scan
-  mondoo:
-    if: ${{ github.event.inputs.enableMondoo == 'true' }}
+  mondoo_scan:
+    if: ${{ github.event.inputs.enableMondoo == 'true' || github.event_name == 'push' || github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
-    needs: [terraform]
+    
     steps:
       - uses: actions/checkout@v4
-      - name: Install Mondoo (cnspec)
+      
+      # --------------------------------------------------------
+      # 1. AWS Live Infrastructure Scan (Using CLI) - FIX APPLIED HERE
+      # --------------------------------------------------------
+      
+      - name: Install Mondoo (cnspec CLI)
+        # 1. Install cnspec. It typically installs to $HOME/.mondoo/bin/
+        run: curl -sSL https://get.mondoo.com | bash
+        
+      - name: Verify and Add cnspec to PATH
+        # 2. Add the installation directory to $GITHUB_PATH. 
+        # This makes the 'cnspec' command available to all subsequent steps.
         run: |
-            curl --retry 3 --retry-delay 10 -sSL https://releases.mondoo.com/debian/pubkey.gpg | gpg --dearmor --output /usr/share/keyrings/mondoo-archive-keyring.gpg
-            echo "deb [signed-by=/usr/share/keyrings/mondoo-archive-keyring.gpg] https://releases.mondoo.com/debian/ stable main" | tee /etc/apt/sources.list.d/mondoo.list && # export MONDOO_REGISTRATION_TOKEN="<YOUR_TOKEN_HERE>"
-            
-            apt update && apt install mondoo
-      - name: Add cnspec to PATH
-        run: echo "$HOME/.mondoo/bin" >> $GITHUB_PATH
+          MONDOO_BIN_PATH=$HOME/.mondoo/bin
+          if [ -d "$MONDOO_BIN_PATH" ]; then
+            echo "::add-path::$MONDOO_BIN_PATH"
+            echo "cnspec installed to: $MONDOO_BIN_PATH"
+          else
+            echo "Error: Mondoo installation directory not found at $MONDOO_BIN_PATH"
+            exit 1
+          fi
+          
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1
-      - name: Run Mondoo Scan
-        run: cnspec scan aws --bundles policies/custom-s3-sg.mql.yaml --output json > mondoo-report.json
-      - name: Upload Mondoo Report
+          aws-region: eu-north-1 # Use your target AWS region
+          
+      - name: Run AWS Live Scan
+        # This command should now succeed because 'cnspec' is in the PATH
+        run: cnspec scan aws --report-title "Live AWS Environment Scan" --output junitxml > live-aws-report.xml
+
+      # --------------------------------------------------------
+      # 2. Terraform Code Scan (Using Dedicated Action)
+      # --------------------------------------------------------
+      
+      - name: Scan Terraform Code
+        # This uses the dedicated action and doesn't rely on the CLI install above.
+        uses: mondoohq/actions/terraform-hcl@v1 
+        with:
+          service-account-credentials: ${{ secrets.MONDOO_CONFIG_BASE64 }}
+          path: terraform-project 
+          report-junit: terraform-hcl-report.xml
+          
+      # --------------------------------------------------------
+      # 3. Report & Artifact Upload
+      # --------------------------------------------------------
+      
+      - name: Publish AWS Live Scan Report
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: 'live-aws-report.xml'
+
+      - name: Publish Terraform Code Scan Report
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: 'terraform-hcl-report.xml'
+
+      - name: Upload Scan Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mondoo-report
-          path: mondoo-report.json
+          name: mondoo-reports
+          path: |
+            live-aws-report.xml
+            terraform-hcl-report.xml
