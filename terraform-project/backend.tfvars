@@ -1,4 +1,4 @@
-backend_bucket         = "my-tfstate-bucket0"
-backend_key            = "terraform.tfstate"
-backend_region         = "eu-north-1"
-backend_lock_table     = "terraform-lock-table"
+bucket         = "my-tfstate-bucket0"
+key            = "terraform.tfstate"
+region         = "eu-north-1"
+lock_table     = "terraform-lock-table"

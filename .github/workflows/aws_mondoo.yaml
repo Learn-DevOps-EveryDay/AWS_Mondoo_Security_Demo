@@ -37,10 +37,11 @@ jobs:
     container:
       image: bridgecrew/checkov:latest
     steps:
-    - name: Run Checkov
+    - name: Run Checkov on all modules
       run: |
-        mkdir -p reports
-        checkov -d terraform-project/ --recursive --output junitxml > reports/checkov-report.xml || true
+        for dir in terraform-project/modules/*; do
+          checkov -d $dir --output junitxml > "reports/$(basename $dir)-checkov.xml" || true
+        done
     - name: Upload Checkov Report
       uses: actions/upload-artifact@v4
       with:

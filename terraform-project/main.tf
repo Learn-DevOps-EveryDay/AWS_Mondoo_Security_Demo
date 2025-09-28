@@ -6,10 +6,10 @@ terraform {
     }
   }
     backend "s3" {
-    bucket         = var.backend_bucket
-    key            = var.backend_key
-    region         = var.backend_region
-    dynamodb_table = var.backend_lock_table
+    bucket         = var.bucket
+    key            = var.key
+    region         = var.region
+    dynamodb_table = var.lock_table
     encrypt        = true
 }
 }
