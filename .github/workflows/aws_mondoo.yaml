@@ -1,5 +1,9 @@
 name: Terraform Infra Pipeline
 
+permissions:
+  contents: read
+  checks: write
+
 on:
   workflow_dispatch:
     inputs:
@@ -52,7 +56,7 @@ jobs:
   terraform:
     needs: [checkov]
     runs-on: ubuntu-latest
-    environment: dev
+    environment: dev   # must match the environment with required reviewers
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +69,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}    
+          aws-region: ${{ secrets.AWS_REGION }}
       - name: Terraform Init
         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
       - name: Terraform Plan
@@ -74,7 +78,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
-          path: terraform/tfplan
+          path: terraform-project/tfplan
+      - name: ManualValidation
+        uses: hmarr/auto-approve-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        if: false   # placeholder to indicate this step is replaced by environment protection
       - name: Terraform Apply
         run: terraform -chdir=terraform-project apply -auto-approve tfplan
 
