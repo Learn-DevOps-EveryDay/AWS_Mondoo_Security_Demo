@@ -104,16 +104,16 @@ jobs:
         with:
           name: terraform-plan-summary
           path: terraform-project/plan-summary.txt
-      - name: Manual Approval before Terraform Apply
-        uses: trstringer/manual-approval@v1
-        with:
-          approvers: santuCG
-          minimum-approvals: 1
-          issue-title: "Approve Terraform Apply"
-          issue-body: "Approve to apply Terraform changes to the **dev** environment."
-          exclude-workflow-initiator-as-approver: false
-          fail-on-denial: true
-          secret: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Manual Approval before Terraform Apply
+      #   uses: trstringer/manual-approval@v1
+      #   with:
+      #     approvers: santuCG
+      #     minimum-approvals: 1
+      #     issue-title: "Approve Terraform Apply"
+      #     issue-body: "Approve to apply Terraform changes to the **dev** environment."
+      #     exclude-workflow-initiator-as-approver: false
+      #     fail-on-denial: true
+      #     secret: ${{ secrets.GITHUB_TOKEN }}
 
   # Stage 3: Destroy
   destroy:
