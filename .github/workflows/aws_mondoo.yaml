@@ -88,11 +88,11 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           
       - name: Terraform Init
-        run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
+        run: terraform -chdir=terraform-project init -backend-config=backend.tfvars 
         
       - name: Terraform Plan
         run: |
-          terraform -chdir=terraform-project plan -out=tfplan
+          terraform -chdir=terraform-project plan -out=tfplan -lock=false
           terraform -chdir=terraform-project show -no-color tfplan > terraform-project/plan-summary.txt
           
       - name: Upload Terraform Plan Summary
