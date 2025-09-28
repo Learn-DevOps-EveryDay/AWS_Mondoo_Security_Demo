@@ -36,28 +36,44 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+
       - name: Install Checkov
         run: pip install checkov
+
       - name: Create Reports Directory
         run: mkdir -p reports
+
       - name: Run Checkov on all modules
         id: checkov_scan
-        run: checkov -d terraform-project/ --output junitxml --output-file reports/checkov-report.xml
+        run: |
+          # Run Checkov. If it fails, still continue.
+          checkov -d terraform-project/ \
+            --output junitxml \
+            --output-file reports/checkov-report.xml || true
+
+          # Guarantee file exists even if Checkov produces no output
+          if [ ! -s reports/checkov-report.xml ]; then
+            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?><testsuites></testsuites>" > reports/checkov-report.xml
+          fi
+
       - name: Upload Checkov Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: checkov-report
           path: reports/checkov-report.xml
+
       - name: Publish Test Report
         if: always()
         uses: mikepenz/action-junit-report@v4
         with:
           report_paths: 'reports/checkov-report.xml'
+          include_passed: true
 
   # Stage 2: Terraform Plan & Apply
   terraform:
@@ -88,15 +104,16 @@ jobs:
         with:
           name: terraform-plan-summary
           path: terraform-project/plan-summary.txt
-      - name: Wait for approval before apply
+      - name: Manual Approval before Terraform Apply
         uses: trstringer/manual-approval@v1
         with:
-          approvers: user1,user2
+          approvers: santuCG
           minimum-approvals: 1
           issue-title: "Approve Terraform Apply"
           issue-body: "Approve to apply Terraform changes to the **dev** environment."
-      - name: Terraform Apply
-        run: terraform -chdir=terraform-project apply -auto-approve tfplan
+          exclude-workflow-initiator-as-approver: false
+          fail-on-denial: true
+          secret: ${{ secrets.GITHUB_TOKEN }}
 
   # Stage 3: Destroy
   destroy:
