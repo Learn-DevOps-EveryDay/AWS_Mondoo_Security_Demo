@@ -1,0 +1,35 @@
+name: "Demo Custom AWS Policies"
+description: "Custom checks for demo project: S3 encryption & SG open SSH"
+policies:
+  - uid: demo-s3-encryption
+    title: "S3 buckets must have default encryption"
+    severity: high
+    impact: 70
+    mql: |
+      aws.s3.buckets.where( encryption == false ).count == 0
+    queries:
+      - uid: aws-s3-buckets
+        title: "List S3 buckets"
+        mql: aws.s3.buckets
+
+  - uid: demo-s3-no-public-acl
+    title: "S3 buckets must not have public ACLs"
+    severity: high
+    impact: 80
+    mql: |
+      aws.s3.buckets.none( bucket -> bucket.acl in ["public-read", "public-read-write"] )
+    queries:
+      - uid: aws-s3-buckets
+        title: "List S3 buckets"
+        mql: aws.s3.buckets
+
+  - uid: demo-sg-no-ssh-world
+    title: "Security groups must not allow 0.0.0.0/0 on port 22"
+    severity: critical
+    impact: 90
+    mql: |
+      aws.security_groups.none( sg -> sg.ingress.any( rule -> rule.from_port == 22 && rule.cidr_blocks.any( c -> c == "0.0.0.0/0" ) ) )
+    queries:
+      - uid: aws-sgs
+        title: "List Security Groups"
+        mql: aws.security_groups

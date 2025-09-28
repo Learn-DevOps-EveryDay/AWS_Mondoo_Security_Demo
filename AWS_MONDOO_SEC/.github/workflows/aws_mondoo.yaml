@@ -1,0 +1,109 @@
+name: Terraform Infra Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      checkovScan:
+        description: "Run Checkov Scan before plan/apply?"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+
+      enableDestroy:
+        description: "Enable destroy stage?"
+        required: true
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+
+      enableMondoo:
+        description: "Run Mondoo Scan"
+        required: true
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+
+jobs:
+  # Stage 1: Checkov Scan
+  checkov:
+    if: ${{ github.event.inputs.checkovScan == 'true' }}
+    runs-on: ubuntu-latest
+    container:
+      image: bridgecrew/checkov:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Checkov
+        run: checkov -d terraform/ --output junitxml > checkov-report.xml
+      - name: Upload Checkov Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-report
+          path: checkov-report.xml
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: '**/checkov-report.xml'
+
+  # Stage 2: Terraform Plan & Apply
+  terraform:
+    needs: [checkov]
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+      - name: Terraform Init
+        run: terraform -chdir=terraform init -backend-config=backend.tfvars
+      - name: Terraform Plan
+        run: terraform -chdir=terraform plan -out=tfplan
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: terraform/tfplan
+      - name: Terraform Apply
+        run: terraform -chdir=terraform apply -auto-approve tfplan
+
+  # Stage 3: Destroy
+  destroy:
+    if: ${{ github.event.inputs.enableDestroy == 'true' }}
+    runs-on: ubuntu-latest
+    needs: [terraform]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+      - name: Terraform Init
+        run: terraform -chdir=terraform init -backend-config=backend.tfvars
+      - name: Terraform Destroy
+        run: terraform -chdir=terraform destroy -auto-approve
+
+  # Stage 4: Mondoo Scan
+  mondoo:
+    if: ${{ github.event.inputs.enableMondoo == 'true' }}
+    runs-on: ubuntu-latest
+    needs: [terraform]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Mondoo (cnspec)
+        run: curl -sSL https://get.mondoo.com | bash
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ueu-north-1
+      - name: Run Mondoo Scan
+        run: cnspec scan aws --bundles policies/custom-s3-sg.mql.yaml --output json > mondoo-report.json
+      - name: Upload Mondoo Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: mondoo-report
+          path: mondoo-report.json
