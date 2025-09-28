@@ -8,6 +8,11 @@ variable "environment" {
   default = "dev"
 }
 
+variable "s3_name" {
+  type = string
+  default = "devopslearn123456"
+}
+
 variable "cidr_block" {
   type    = string
   default = "10.0.0.0/16"

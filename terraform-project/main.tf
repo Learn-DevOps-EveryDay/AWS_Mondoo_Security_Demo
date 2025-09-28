@@ -61,26 +61,14 @@ module "sg" {
 # S3
 module "s3" {
   source      = "./modules/s3"
-  bucket_name = "${local.name_prefix}-s3-devops"
+  bucket_name = var.s3_name
   tags        = local.tags
-}
-
-# Data sources
-data "aws_availability_zones" "available" {}
-data "aws_ami" "ubuntu" {
-  most_recent = true
-  owners      = ["099720109477"]
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
-  }
 }
 
 # EC2
 module "ec2" {
   source        = "./modules/ec2"
-  ami           = data.aws_ami.ubuntu.id
+  ami           = "ami-0a716d3f3b16d290c"
   instance_type = var.instance_type
   subnet_id     = module.subnet.subnet_id
   sg_ids        = [module.sg.sg_id]
