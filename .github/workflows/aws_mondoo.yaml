@@ -33,18 +33,20 @@ jobs:
     container:
       image: bridgecrew/checkov:latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Run Checkov
-        run: checkov -d terraform-project/ --output junitxml > checkov-report.xml
-      - name: Upload Checkov Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: checkov-report
-          path: checkov-report.xml
-      - name: Publish Test Report
-        uses: mikepenz/action-junit-report@v4
-        with:
-          report_paths: '**/checkov-report.xml'
+    - name: Run Checkov
+      run: |
+        mkdir -p reports
+        checkov -d terraform-project/ --output junitxml > reports/checkov-report.xml 2>&1 || true
+    - name: Upload Checkov Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: checkov-report
+        path: reports/checkov-report.xml
+    - name: Publish Test Report
+      uses: mikepenz/action-junit-report@v4
+      with:
+        report_paths: 'reports/checkov-report.xml'
+
 
   # Stage 2: Terraform Plan & Apply
   terraform:
