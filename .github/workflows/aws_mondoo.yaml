@@ -152,21 +152,18 @@ jobs:
       - uses: actions/checkout@v4
       
       # --------------------------------------------------------
-      # 1. AWS Live Infrastructure Scan (Using CLI) - FIX APPLIED HERE
+      # 1. AWS Live Infrastructure Scan (CLI)
+      # (No change needed here, as this part uses the CLI)
       # --------------------------------------------------------
       
       - name: Install Mondoo (cnspec CLI)
-        # 1. Install cnspec. It typically installs to $HOME/.mondoo/bin/
         run: curl -sSL https://get.mondoo.com | bash
         
       - name: Verify and Add cnspec to PATH
-        # 2. Add the installation directory to $GITHUB_PATH. 
-        # This makes the 'cnspec' command available to all subsequent steps.
         run: |
           MONDOO_BIN_PATH=$HOME/.mondoo/bin
           if [ -d "$MONDOO_BIN_PATH" ]; then
             echo "::add-path::$MONDOO_BIN_PATH"
-            echo "cnspec installed to: $MONDOO_BIN_PATH"
           else
             echo "Error: Mondoo installation directory not found at $MONDOO_BIN_PATH"
             exit 1
@@ -177,18 +174,17 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1 # Use your target AWS region
+          aws-region: eu-north-1
           
       - name: Run AWS Live Scan
-        # This command should now succeed because 'cnspec' is in the PATH
         run: cnspec scan aws --report-title "Live AWS Environment Scan" --output junitxml > live-aws-report.xml
 
       # --------------------------------------------------------
-      # 2. Terraform Code Scan (Using Dedicated Action)
+      # 2. Terraform Code Scan (Dedicated Action) - FIX APPLIED HERE
       # --------------------------------------------------------
       
       - name: Scan Terraform Code
-        # This uses the dedicated action and doesn't rely on the CLI install above.
+        # 🎯 CORRECTED ACTION PATH
         uses: mondoohq/actions/terraform-hcl@v1 
         with:
           service-account-credentials: ${{ secrets.MONDOO_CONFIG_BASE64 }}
