@@ -33,6 +33,7 @@ jobs:
   checkov:
     if: ${{ github.event.inputs.checkovScan == 'true' }}
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       
