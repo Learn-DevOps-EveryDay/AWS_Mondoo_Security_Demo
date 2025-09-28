@@ -69,12 +69,19 @@ module "s3" {
 data "aws_availability_zones" "available" {}
 
 # EC2
-module "ec2" {
-  source        = "./modules/ec2"
+# module "ec2" {
+#   source        = "./modules/ec2"
+#   ami           = "ami-0a716d3f3b16d290c"
+#   instance_type = var.instance_type
+#   subnet_id     = module.subnet.subnet_id
+#   sg_ids        = [module.sg.sg_id]
+#   name          = "${local.name_prefix}-ec2-web"
+#   tags          = local.tags
+# }
+
+resource "aws_instance" "example" {
   ami           = "ami-0a716d3f3b16d290c"
-  instance_type = var.instance_type
-  subnet_id     = module.subnet.subnet_id
-  sg_ids        = [module.sg.sg_id]
-  name          = "${local.name_prefix}-ec2-web"
-  tags          = local.tags
+  instance_type = "t3.micro"
+
+  tags = local.tags
 }

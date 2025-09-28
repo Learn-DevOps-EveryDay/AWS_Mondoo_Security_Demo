@@ -6,7 +6,7 @@ cidr_block        = "10.0.0.0/16"
 public_subnet_cidr = "10.0.1.0/24"
 
 # EC2
-instance_type = "t3.micro"
+# instance_type = "t3.micro"
 
 # Security Group Rules
 ingress_rules = [
