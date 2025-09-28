@@ -56,7 +56,7 @@ jobs:
   terraform:
     needs: [checkov]
     runs-on: ubuntu-latest
-    environment: dev   # must match the environment with required reviewers
+    environment: dev   # environment with required reviewers
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -73,17 +73,15 @@ jobs:
       - name: Terraform Init
         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
       - name: Terraform Plan
-        run: terraform -chdir=terraform-project plan -out=tfplan
-      - name: Upload plan
+        run: |
+          terraform -chdir=terraform-project plan -out=tfplan
+          terraform -chdir=terraform-project show -no-color tfplan > terraform-project/plan-summary.txt
+      - name: Upload Terraform Plan Summary
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan
-          path: terraform-project/tfplan
-      - name: ManualValidation
-        uses: hmarr/auto-approve-action@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        if: false   # placeholder to indicate this step is replaced by environment protection
+          name: terraform-plan-summary
+          path: terraform-project/plan-summary.txt
+      # Manual approval occurs here because of environment protection
       - name: Terraform Apply
         run: terraform -chdir=terraform-project apply -auto-approve tfplan
 
