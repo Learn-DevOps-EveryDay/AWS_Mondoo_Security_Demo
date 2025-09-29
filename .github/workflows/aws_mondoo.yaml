@@ -3,7 +3,7 @@ name: Terraform Infra Pipeline
 permissions:
   contents: read
   checks: write
-  issues: write
+  issues: write # Keep this to satisfy the GITHUB_TOKEN requirements for other actions
 
 on:
   workflow_dispatch:
@@ -24,15 +24,11 @@ on:
 
 jobs:
   # ====================================================================
-  # STAGE 1: IaC Security Scan (Only runs if NOT a destroy run)
+  # STAGE 1: IaC Security Scan 
   # ====================================================================
 
-  # This job will be skipped if destroy is enabled, preventing the Terraform
-  # Apply job from running unnecessarily.
-
-  # 1A: Checkov Scan
+  # Scans run only if NOT a destroy run (to avoid unnecessary compute)
   checkov:
-    # 🎯 FIX: Add check to skip if destroy is enabled
     if: ${{ github.event.inputs.securityScan == 'checkov' && github.event.inputs.enableDestroy != 'true' }}
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -45,12 +41,9 @@ jobs:
       - name: Install Checkov
         run: pip install checkov
       - name: Run Checkov on all modules
-        id: checkov_scan
         run: checkov -d terraform-project/ || true
 
-  # 1B: Mondoo Scan
   mondoo_scan: 
-    # 🎯 FIX: Add check to skip if destroy is enabled
     if: ${{ github.event.inputs.securityScan == 'mondoo' && github.event.inputs.enableDestroy != 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -60,19 +53,19 @@ jobs:
         with:
           service-account-credentials: ${{ secrets.MONDOO_SERVICE_ACCOUNT }}
           path: terraform-project
+          output: compact 
 
   # ====================================================================
-  # STAGE 2: Terraform Plan & Apply (Only runs if NOT a destroy run)
+  # STAGE 2: Terraform Plan & Apply (Approval Pop-up for Apply)
   # ====================================================================
   
   terraform:
-    # 🎯 FIX: Requires scans only if they were run, and only runs if NOT a destroy operation.
     needs: [checkov, mondoo_scan]
     if: ${{ github.event.inputs.enableDestroy != 'true' && always() }} 
     runs-on: ubuntu-latest
+    # 👇 Pop-up for Apply is enforced by the 'dev' environment protection
     environment: 
-      name: dev # Environment protection gates the APPLY step
-      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      name: dev
     
     timeout-minutes: 60
     steps:
@@ -99,16 +92,19 @@ jobs:
           name: terraform-plan-summary
           path: terraform-project/plan-summary.txt
       - name: Terraform Apply
+        # Job pauses here until 'dev' environment is approved.
         run: terraform -chdir=terraform-project apply -auto-approve tfplan
 
   # ====================================================================
-  # STAGE 3: Destroy (Runs independently when flag is set)
+  # STAGE 3: Destroy (Approval Pop-up for Destroy)
   # ====================================================================
   
   destroy:
-    # 🎯 FIX: Removed 'needs: [terraform]' so it can run directly.
     if: ${{ github.event.inputs.enableDestroy == 'true' }}
     runs-on: ubuntu-latest
+    # 👇 Pop-up for Destroy is enforced by the 'dev' environment protection
+    environment: 
+      name: dev
     
     steps:
       - uses: actions/checkout@v4
@@ -122,19 +118,10 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-          
       - name: Terraform Init
         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
-
-      # This manual approval gate controls the destroy operation explicitly.
-      - name: Manual Approval before Destroy
-        uses: trstringer/manual-approval@v1
-        with:
-          approvers: santuCG 
-          minimum-approvals: 1
-          issue-title: "🚨 Approve Terraform Destroy"
-          issue-body: "Approve to proceed with **DESTROYING** all resources in the **dev** environment."
-          secret: ${{ secrets.GITHUB_TOKEN }}
         
+      # The job will pause HERE, showing the approval pop-up due to the 'environment' block above.
+      
       - name: Terraform Destroy
         run: terraform -chdir=terraform-project destroy -auto-approve
