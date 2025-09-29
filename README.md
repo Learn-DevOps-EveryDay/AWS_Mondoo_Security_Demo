@@ -1,12 +1,12 @@
 # AWS Mondoo Security Demo
 
-## 🛡️ Project Goal: Shift-Left DevSecOps with Terraform
+## Project Goal: Shift-Left DevSecOps with Terraform
 
 This project demonstrates the integration of **security-as-code** principles into the **AWS infrastructure lifecycle**. The core focus is on performing **static security analysis** and **policy compliance checks** *before* the code is provisioned, using **Terraform** for IaC and **Mondoo/cnspec** for security assessment.
 
 ---
 
-## 🎯 Current Learning Focus and Roadmap
+## Current Learning Focus and Roadmap
 
 This project is a continuous learning exercise in advancing DevSecOps practices. My current goals include:
 
@@ -15,7 +15,7 @@ This project is a continuous learning exercise in advancing DevSecOps practices.
 
 ---
 
-## 🔄 CI/CD Workflow: Conditional Execution
+## CI/CD Workflow: Conditional Execution
 
 This pipeline is executed using `workflow_dispatch`, allowing the user to select the security scanner and explicitly choose between an **Apply** run or a dedicated **Destroy** run.
 
@@ -38,7 +38,7 @@ This pipeline is executed using `workflow_dispatch`, allowing the user to select
 
 ---
 
-## ⚙️ Technologies Used
+## Technologies Used
 
 | Technology | Role in Project |
 | :--- | :--- |
@@ -50,7 +50,7 @@ This pipeline is executed using `workflow_dispatch`, allowing the user to select
 
 ---
 
-## 💡 Local Development and Execution
+## Local Development and Execution
 
 ### Prerequisites
 

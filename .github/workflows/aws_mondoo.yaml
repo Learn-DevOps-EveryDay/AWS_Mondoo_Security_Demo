@@ -1,3 +1,125 @@
+# name: Terraform Infra Pipeline
+
+# permissions:
+#   contents: read
+#   checks: write
+#   issues: write
+
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       securityScan:
+#         description: "Select IaC Security Scanner"
+#         required: true
+#         default: "checkov"
+#         type: choice
+#         options: ["checkov", "mondoo", "none"]
+
+#       enableDestroy:
+#         description: "Enable destroy stage?"
+#         required: true
+#         default: "false"
+#         type: choice
+#         options: ["true", "false"]
+
+# jobs:
+#   # ====================================================================
+#   # STAGE 1: IaC Security Scan
+#   # ====================================================================
+
+#   # Scans run only if NOT a destroy run (to avoid unnecessary compute)
+#   checkov:
+#     if: ${{ github.event.inputs.securityScan == 'checkov' && github.event.inputs.enableDestroy != 'true' }}
+#     runs-on: ubuntu-latest
+#     continue-on-error: true
+#     steps:
+#       - uses: actions/checkout@v4
+#       - name: Set up Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: '3.x'
+#       - name: Install Checkov
+#         run: pip install checkov
+#       - name: Run Checkov on all modules
+#         run: checkov -d terraform-project/ || true
+
+#   mondoo_scan: 
+#     if: ${{ github.event.inputs.securityScan == 'mondoo' && github.event.inputs.enableDestroy != 'true' }}
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - name: Scan Terraform with Mondoo
+#         uses: mondoohq/actions/terraform-hcl@main 
+#         with:
+#           service-account-credentials: ${{ secrets.MONDOO_SERVICE_ACCOUNT }}
+#           path: terraform-project
+#           output: full 
+
+#   # ====================================================================
+#   # STAGE 2: Terraform Plan & Apply
+#   # ====================================================================
+  
+#   terraform:
+#     needs: [checkov, mondoo_scan]
+#     if: ${{ github.event.inputs.enableDestroy != 'true' && always() }} 
+#     runs-on: ubuntu-latest
+#     environment: 
+#       name: dev
+#     timeout-minutes: 60
+#     steps:
+#       - uses: actions/checkout@v4
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: 1.7.0
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v2
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ secrets.AWS_REGION }}
+#       - name: Terraform Init
+#         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
+#       - name: Terraform Plan
+#         run: |
+#           terraform -chdir=terraform-project plan -out=tfplan
+#           terraform -chdir=terraform-project show -no-color tfplan > terraform-project/plan-summary.txt
+#       - name: Upload Terraform Plan Summary
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: terraform-plan-summary
+#           path: terraform-project/plan-summary.txt
+#       - name: Terraform Apply
+#         run: terraform -chdir=terraform-project apply -auto-approve tfplan
+
+#   # ====================================================================
+#   # STAGE 3: Destroy
+#   # ====================================================================
+  
+#   destroy:
+#     if: ${{ github.event.inputs.enableDestroy == 'true' }}
+#     runs-on: ubuntu-latest
+#     environment: 
+#       name: dev
+    
+#     steps:
+#       - uses: actions/checkout@v4
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: 1.7.0
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v2
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ secrets.AWS_REGION }}
+#       - name: Terraform Init
+#         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars      
+#       - name: Terraform Destroy
+#         run: terraform -chdir=terraform-project destroy -auto-approve
+
+
 name: Terraform Infra Pipeline
 
 permissions:
@@ -16,7 +138,7 @@ on:
         options: ["checkov", "mondoo", "none"]
 
       enableDestroy:
-        description: "Enable destroy stage?"
+        description: "Enable destroy stage? (true will skip apply stages)"
         required: true
         default: "false"
         type: choice
@@ -24,14 +146,15 @@ on:
 
 jobs:
   # ====================================================================
-  # STAGE 1: IaC Security Scan
+  # STAGE 1: IaC Security Scan (Runs only for Apply/Plan runs)
   # ====================================================================
 
-  # Scans run only if NOT a destroy run (to avoid unnecessary compute)
   checkov:
+    # Only run if checkov is selected AND it's not a destroy run
     if: ${{ github.event.inputs.securityScan == 'checkov' && github.event.inputs.enableDestroy != 'true' }}
     runs-on: ubuntu-latest
-    continue-on-error: true
+    # Set to false to enforce security gate before terraform runs
+    continue-on-error: false 
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -41,9 +164,11 @@ jobs:
       - name: Install Checkov
         run: pip install checkov
       - name: Run Checkov on all modules
-        run: checkov -d terraform-project/ || true
+        # Fail the job if checkov finds issues (exit code > 0)
+        run: checkov -d terraform-project/ 
 
   mondoo_scan: 
+    # Only run if mondoo is selected AND it's not a destroy run
     if: ${{ github.event.inputs.securityScan == 'mondoo' && github.event.inputs.enableDestroy != 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -56,12 +181,15 @@ jobs:
           output: full 
 
   # ====================================================================
-  # STAGE 2: Terraform Plan & Apply
+  # STAGE 2: Terraform Plan & Apply (Runs only for Apply runs)
   # ====================================================================
   
   terraform:
+    # Depends on EITHER checkov OR mondoo_scan finishing successfully.
+    # We use success() here because the jobs are conditionally run.
     needs: [checkov, mondoo_scan]
-    if: ${{ github.event.inputs.enableDestroy != 'true' && always() }} 
+    # Runs IF it's not a destroy run AND the dependency results are evaluated.
+    if: ${{ github.event.inputs.enableDestroy != 'true' && (success() || failure()) }} 
     runs-on: ubuntu-latest
     environment: 
       name: dev
@@ -76,7 +204,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Terraform Init
         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
@@ -93,10 +221,11 @@ jobs:
         run: terraform -chdir=terraform-project apply -auto-approve tfplan
 
   # ====================================================================
-  # STAGE 3: Destroy
+  # STAGE 3: Destroy (Runs only if explicitly requested)
   # ====================================================================
   
   destroy:
+    # Runs only if enableDestroy is true
     if: ${{ github.event.inputs.enableDestroy == 'true' }}
     runs-on: ubuntu-latest
     environment: 
@@ -115,6 +244,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Terraform Init
-        run: terraform -chdir=terraform-project init -backend-config=backend.tfvars      
+        run: terraform -chdir=terraform-project init -backend-config=backend.tfvars      
       - name: Terraform Destroy
         run: terraform -chdir=terraform-project destroy -auto-approve
