@@ -3,6 +3,7 @@ name: Terraform Infra Pipeline
 permissions:
   contents: read
   checks: write
+  issues: write
 
 on:
   workflow_dispatch:
