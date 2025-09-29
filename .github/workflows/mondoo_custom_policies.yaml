@@ -6,7 +6,7 @@ on:
       awsRegion:
         description: 'AWS Region to scan'
         required: true
-        default: 'us-east-1' # Match your default region secret
+        default: 'us-east-1' 
 
 permissions:
   contents: read
@@ -18,7 +18,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Configure AWS Credentials
+      # 1. Configure AWS Credentials (STANDARD, UNCHANGED)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -26,19 +26,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ github.event.inputs.awsRegion }}
 
-      # 2. Run Mondoo Scan with Custom Policy
+      # 2. Run Mondoo Scan with Custom Policy (NEW DOCKER METHOD)
       - name: Scan AWS Account with Custom Policy
-        # Use the generic Mondoo cnspec action for scanning live cloud assets
-        uses: mondoohq/mondoo-action@v1 
-        with:
-          
-          # Target the AWS cloud provider
-          target: aws
-          
-          # Specify the policy file to run (relative to the repo root)
-          policy-bundle: ../../mondoo-custom-policies/custom-s3-sg.mql.yaml
-          
-          # Use 'full' output to see detailed results for every check
-          output: full
-          
-          # The Mondoo action automatically runs: cnspec scan aws --policy-bundle .mondoo/policies/custom_aws.yml
+        # Use the official Mondoo Docker image and pass the commands directly.
+        # This bypasses any issues with the GitHub Action repository not being found.
+        # This command runs cnspec, scanning the 'aws' target using the policy bundle.
+        run: |
+          docker run --rm \
+            -v ${PWD}:/opt/repo \
+            -e AWS_ACCESS_KEY_ID \
+            -e AWS_SECRET_ACCESS_KEY \
+            -e AWS_REGION \
+            mondoo/cnspec:latest \
+            scan aws \
+            --policy-bundle /opt/repo/../../mondoo-custom-policies/custom-s3-sg.mql.yaml \
+            --output full
