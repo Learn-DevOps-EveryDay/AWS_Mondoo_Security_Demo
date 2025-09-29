@@ -42,70 +42,22 @@ jobs:
       - name: Install Checkov
         run: pip install checkov
 
-      - name: Create Reports Directory
-        run: mkdir -p reports
-
       - name: Run Checkov on all modules
         id: checkov_scan
-        run: |
-          checkov -d terraform-project/ \
-            --output junitxml \
-            --output-file reports/checkov-report.xml || true
+        run: checkov -d terraform-project/ || true
 
-          if [ ! -s reports/checkov-report.xml ]; then
-            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?><testsuites></testsuites>" > reports/checkov-report.xml
-          fi
-
-      - name: Upload Checkov Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: checkov-report
-          path: reports/checkov-report.xml
-
-      - name: Publish Test Report
-        if: always()
-        # 🎯 FIX: Re-enabled the report publisher
-        uses: mikepenz/action-junit-report@v4
-        with:
-          report_paths: 'reports/checkov-report.xml'
-          include_passed: true
-          
-  # 1B: Mondoo Scan
-  # 🎯 FIX: Corrected job structure by de-indenting the entire job
 # 1B: Mondoo Scan
   mondoo_scan: 
     if: ${{ github.event.inputs.securityScan == 'mondoo' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
       - name: Scan Terraform with Mondoo
         uses: mondoohq/actions/terraform-hcl@main 
         with:
           service-account-credentials: ${{ secrets.MONDOO_SERVICE_ACCOUNT }}
           path: terraform-project
-          
-          # 🎯 FIX 1: Set the primary 'output' input to 'junit'
-          output: junit 
-          
-          # 🎯 FIX 2: Use 'args' ONLY for the filename. 
-          # This ensures the action writes the JUnit output to the file.
-          args: '--output-file mondoo-report.xml' 
-          
-      - name: Publish Test Report
-        # This step will now find the report file
-        if: always()
-        uses: mikepenz/action-junit-report@v4
-        with:
-          report_paths: 'mondoo-report.xml'
-
-      - name: Upload Scan Artifact
-        # This step will now find the report file
-        uses: actions/upload-artifact@v4
-        with:
-          name: mondoo-report
-          path: mondoo-report.xml
+          output: compact
 
   # ====================================================================
   # STAGE 2: Terraform Plan & Apply 
@@ -117,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: 
       name: dev
-      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      # url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     
     timeout-minutes: 60
     steps:
