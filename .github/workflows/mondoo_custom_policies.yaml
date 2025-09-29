@@ -39,5 +39,5 @@ jobs:
             -e AWS_REGION \
             mondoo/cnspec:latest \
             scan aws \
-            --policy-bundle /opt/repo/../../mondoo-custom-policies/custom-s3-sg.mql.yaml \
+            --policy-bundle /opt/repo/mondoo-custom-policies/custom-s3-sg.mql.yaml \
             --output full
