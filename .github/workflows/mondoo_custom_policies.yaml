@@ -47,7 +47,8 @@ jobs:
             -e AWS_SECRET_ACCESS_KEY \
             -e AWS_REGION \
             mondoo/cnspec:latest \
-            scan aws \
-            --policy-bundle /opt/repo/mondoo-custom-policies/custom-s3-sg.mql.yaml \
+            run \
+            --path /opt/repo/mondoo-custom-policies/custom-s3-sg.mql.yaml \
+            --target aws \
             --output full \
             --incognito
