@@ -1,22 +1,41 @@
-# AWS Security Demo Project
+# AWS Mondoo Security Demo
 
-This repo demonstrates:
-- Infrastructure as Code (Terraform)
-- Static analysis with Checkov
-- Secure deployments with GitHub Actions (approval gates)
-- Runtime/cloud scanning with Mondoo (`cnspec`)
-- Policy-as-code using YAML
+## Project Goal: Shifting Security Left
 
-## Pipeline Stages
-1. **Checkov Scan** – runs only if `checkovScan == true`. Outputs JUnit results.
-2. **Terraform Plan & Apply** – requires manual approval before apply.
-3. **Terraform Destroy** – runs only if `enableDestroy == true`.
-4. **Mondoo Scan** – runs only if `enableMondoo == true`.validates resources against built-in and custom policies.
+This repository demonstrates the integration of **security-as-code** principles into the **AWS infrastructure lifecycle**. The core focus is on performing security and compliance checks *before* the code is deployed, using **Terraform** for provisioning and **Mondoo/cnspec** for security analysis.
 
-## Custom Mondoo Policies
-See `policies/custom-s3-sg.mql.yaml`:
-- No S3 public ACLs
-- No SG open SSH (0.0.0.0/0:22)
+---
 
-## Cleanup
-To avoid charges, destroy resources via workflow (`enableDestroy == true`).
+##  Current Learning Focus and Roadmap
+
+This project is a continuous learning exercise in DevSecOps. My immediate goals for advancing this workflow include:
+
+1.  **Live Environment Scanning Pipeline:** I am actively working on implementing a separate CI/CD pipeline dedicated to scanning the **live AWS environment**. This pipeline will ensure continuous security assessment of deployed resources, complementing the static analysis performed earlier in the process.
+2.  **Custom Policy Development:** I am building a library of **custom security policies** tailored to specific organizational needs. This involves leveraging the power of **Mondoo Query Language (MQL)** and executing these checks using the `cnspec` tool.
+
+---
+
+## CI/CD & DevSecOps Workflow
+
+This diagram illustrates the current automated flow for managing infrastructure code deployment, integrating security scans, and utilizing manual validation gates.
+
+<details>
+<summary>Click to view the complete workflow diagram</summary>
+
+```mermaid
+graph TD
+    A[Developer Pushes Code to GitHub] --> B(Workflow Dispatch Trigger);
+    B --> C[Stage 1: Static Code Analysis (Checkov / Mondoo)];
+    C -- Success --> D[Stage 2: Terraform Init];
+    D --> E[Stage 2: Terraform Plan];
+    E --> F{Manual Validation / Approval Gate};
+    F -- Approved --> G[Stage 2: Terraform Apply];
+    G --> H[Stage 3: Terraform Destroy (Optional Cleanup)];
+    C -- Failure --> I(Pipeline Fails: Requires Code Fix);
+    F -- Rejected --> I;
+
+    style A fill:#f9f,stroke:#333
+    style C fill:#ccf,stroke:#333
+    style F fill:#ffa,stroke:#333
+    style G fill:#afa,stroke:#333
+    style H fill:#faa,stroke:#333
