@@ -146,15 +146,14 @@ on:
 
 jobs:
   # ====================================================================
-  # STAGE 1: IaC Security Scan (Runs only for Apply/Plan runs)
+  # STAGE 1: IaC Security Scan (Conditional Gates)
   # ====================================================================
 
   checkov:
     # Only run if checkov is selected AND it's not a destroy run
     if: ${{ github.event.inputs.securityScan == 'checkov' && github.event.inputs.enableDestroy != 'true' }}
     runs-on: ubuntu-latest
-    # Set to false to enforce security gate before terraform runs
-    continue-on-error: false 
+    continue-on-error: false # Fail the workflow if a security issue is found
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -164,13 +163,13 @@ jobs:
       - name: Install Checkov
         run: pip install checkov
       - name: Run Checkov on all modules
-        # Fail the job if checkov finds issues (exit code > 0)
         run: checkov -d terraform-project/ 
 
   mondoo_scan: 
     # Only run if mondoo is selected AND it's not a destroy run
     if: ${{ github.event.inputs.securityScan == 'mondoo' && github.event.inputs.enableDestroy != 'true' }}
     runs-on: ubuntu-latest
+    continue-on-error: false # Fail the workflow if a security issue is found
     steps:
       - uses: actions/checkout@v4
       - name: Scan Terraform with Mondoo
@@ -181,15 +180,28 @@ jobs:
           output: full 
 
   # ====================================================================
-  # STAGE 2: Terraform Plan & Apply (Runs only for Apply runs)
+  # SECURITY GATE: Ensures Terraform runs after conditional scans
+  # ====================================================================
+  
+  security_gate:
+    # Needs both scan jobs, but runs regardless of whether they were skipped or ran
+    needs: [checkov, mondoo_scan]
+    # Runs IF it's an Apply run AND all dependencies either succeeded or were skipped.
+    if: ${{ github.event.inputs.enableDestroy != 'true' && always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Scan Status
+        run: echo "Security gate passed/skipped. Proceeding to Terraform stages."
+
+  # ====================================================================
+  # STAGE 2: Terraform Plan & Apply 
   # ====================================================================
   
   terraform:
-    # Depends on EITHER checkov OR mondoo_scan finishing successfully.
-    # We use success() here because the jobs are conditionally run.
-    needs: [checkov, mondoo_scan]
-    # Runs IF it's not a destroy run AND the dependency results are evaluated.
-    if: ${{ github.event.inputs.enableDestroy != 'true' && (success() || failure()) }} 
+    # Now depends ONLY on the security_gate, which is guaranteed to run
+    needs: [security_gate]
+    # Runs IF it's not a destroy run AND the security_gate succeeded
+    if: ${{ github.event.inputs.enableDestroy != 'true' && success() }} 
     runs-on: ubuntu-latest
     environment: 
       name: dev
@@ -204,7 +216,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Terraform Init
         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
@@ -225,7 +237,7 @@ jobs:
   # ====================================================================
   
   destroy:
-    # Runs only if enableDestroy is true
+    # Runs only if enableDestroy is true (mutually exclusive with the apply path)
     if: ${{ github.event.inputs.enableDestroy == 'true' }}
     runs-on: ubuntu-latest
     environment: 
