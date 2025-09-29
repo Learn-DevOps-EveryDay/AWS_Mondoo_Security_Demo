@@ -1,6 +1,7 @@
-name: Mondoo Custom AWS Policy Scan
+name: Mondoo Custom AWS Scan (Live Environment)
 
 on:
+  # Allows you to trigger this workflow manually from the GitHub Actions tab
   workflow_dispatch:
     inputs:
       awsRegion:
@@ -9,7 +10,7 @@ on:
         default: 'us-east-1' 
 
 permissions:
-  contents: read
+  contents: read # Only needs read access to check out code and policies
 
 jobs:
   mondoo_aws_scan:
@@ -18,7 +19,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Configure AWS Credentials (STANDARD, UNCHANGED)
+      # 1. Configure AWS Credentials
+      # This step authenticates the runner to AWS using repository secrets.
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -26,18 +28,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ github.event.inputs.awsRegion }}
 
-      # 2. Run Mondoo Scan with Custom Policy (NEW DOCKER METHOD)
+      # 2. Run Mondoo Scan with Custom Policy
+      # This executes the scan using the official Docker image for robustness.
       - name: Scan AWS Account with Custom Policy
-        # Use the official Mondoo Docker image and pass the commands directly.
-        # This bypasses any issues with the GitHub Action repository not being found.
-        # This command runs cnspec, scanning the 'aws' target using the policy bundle.
         run: |
+          # $GITHUB_WORKSPACE is the root of your checked-out repository.
           docker run --rm \
-            -v ${PWD}:/opt/repo \
+            -v $GITHUB_WORKSPACE:/opt/repo \
             -e AWS_ACCESS_KEY_ID \
             -e AWS_SECRET_ACCESS_KEY \
             -e AWS_REGION \
             mondoo/cnspec:latest \
             scan aws \
             --policy-bundle /opt/repo/mondoo-custom-policies/custom-s3-sg.mql.yaml \
-            --output full
+            --output full \
+            --incognito
