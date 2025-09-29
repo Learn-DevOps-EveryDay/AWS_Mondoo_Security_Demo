@@ -73,6 +73,7 @@ jobs:
           
   # 1B: Mondoo Scan
   # 🎯 FIX: Corrected job structure by de-indenting the entire job
+# 1B: Mondoo Scan
   mondoo_scan: 
     if: ${{ github.event.inputs.securityScan == 'mondoo' }}
     runs-on: ubuntu-latest
@@ -85,17 +86,22 @@ jobs:
           service-account-credentials: ${{ secrets.MONDOO_SERVICE_ACCOUNT }}
           path: terraform-project
           
-          # 🎯 FIX 1: Remove the invalid 'report-junit' input
-          # 🎯 FIX 2: Use the 'args' input to pass the JUnit output flag to cnspec
-          args: '--output junit --output-file mondoo-report.xml' 
+          # 🎯 FIX 1: Set the primary 'output' input to 'junit'
+          output: junit 
+          
+          # 🎯 FIX 2: Use 'args' ONLY for the filename. 
+          # This ensures the action writes the JUnit output to the file.
+          args: '--output-file mondoo-report.xml' 
           
       - name: Publish Test Report
+        # This step will now find the report file
         if: always()
         uses: mikepenz/action-junit-report@v4
         with:
           report_paths: 'mondoo-report.xml'
 
       - name: Upload Scan Artifact
+        # This step will now find the report file
         uses: actions/upload-artifact@v4
         with:
           name: mondoo-report
