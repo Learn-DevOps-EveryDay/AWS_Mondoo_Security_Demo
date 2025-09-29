@@ -20,16 +20,17 @@ jobs:
       - name: Run Mondoo Scan with Custom Policy
         run: |
           docker run --rm \
-            -e MONDOO_CONFIG="$MONDOO_CONFIG" \
             -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
             -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
             -e AWS_REGION="${{ github.event.inputs.awsRegion }}" \
+            -e MONDOO_CONFIG="$MONDOO_CONFIG" \
             -v $GITHUB_WORKSPACE:/workspace \
             mondoo/cnspec:latest \
             scan aws \
             --policy-bundle /workspace/mondoo-custom-policies/custom-s3-sg.mql.yaml \
             --output full
         env:
-          MONDOO_CONFIG: ${{ secrets.MONDOO_CONFIG }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MONDOO_CONFIG: ${{ secrets.MONDOO_CONFIG }}
+
