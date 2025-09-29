@@ -55,15 +55,14 @@ This pipeline is executed using `workflow_dispatch`, allowing the user to select
 ### Prerequisites
 
 1.  An **AWS account** with configured credentials.
-2.  **Terraform** and **Mondoo/cnspec** installed locally.
+2.  **Terraform**, **Checkov** and **Mondoo/cnspec** installed locally.
 
 ### Local Steps
 
-1.  **Clone and Initialize:**
+1.  **Clone the repo:**
     ```bash
     git clone [https://github.com/Learn-DevOps-EveryDay/AWS_Mondoo_Security_Demo.git](https://github.com/Learn-DevOps-EveryDay/AWS_Mondoo_Security_Demo.git)
     cd AWS_Mondoo_Security_Demo
-    terraform -chdir=terraform-project init -backend-config=backend.tfvars
     ```
 
 2.  **Run Local Static Checks:**
@@ -72,10 +71,5 @@ This pipeline is executed using `workflow_dispatch`, allowing the user to select
     checkov -d terraform-project/
     
     # Mondoo/cnspec
-    cnspec scan file terraform-project/
-    ```
-
-3.  **Plan Changes:**
-    ```bash
-    terraform -chdir=terraform-project plan
+    cnspec scan terraform terraform-project/
     ```
