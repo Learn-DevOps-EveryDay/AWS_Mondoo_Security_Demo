@@ -1,6 +1,7 @@
 # This top-level is what the 'cnspec scan --policy-bundle' expects.
 policies:
 - name: "Demo Custom AWS Policies"
+  uid: demo-aws-security-policy
   description: "Custom checks for demo project: S3 encryption & SG open SSH"
   platform: aws 
   type: infrastructure
