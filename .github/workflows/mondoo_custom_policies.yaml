@@ -1,52 +1,33 @@
 name: Mondoo Custom AWS Scan (Live Environment)
 
 on:
-  # Allows you to trigger this workflow manually from the GitHub Actions tab
   workflow_dispatch:
     inputs:
       awsRegion:
         description: 'AWS Region to scan'
         required: true
-        default: 'eu-north-1' 
+        default: 'eu-north-1'
 
 permissions:
-  contents: read # Only needs read access to check out code and policies
+  contents: read
 
 jobs:
-  mondoo_aws_scan:
+  mondoo-scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ github.event.inputs.awsRegion }}
-
-      # 🎯 STEP 1: CORRECTED DIAGNOSTIC CHECK (Using /bin/sh)
-      - name: Verify Policy File Exists in Container
+      - name: Run Mondoo Scan with Custom Policy
         run: |
-          echo "Attempting to list the file at the specified path inside the container..."
-          # By adding --entrypoint /bin/sh, we bypass the default 'cnspec' command 
-          # and run the standard Linux 'ls' shell command.
           docker run --rm \
-            --entrypoint /bin/sh \
-            -v $GITHUB_WORKSPACE:/opt/repo \
+            -e MONDOO_CONFIG="$MONDOO_CONFIG" \
+            -e AWS_REGION="${{ github.event.inputs.awsRegion }}" \
+            -v $GITHUB_WORKSPACE:/workspace \
             mondoo/cnspec:latest \
-            -c "ls -l /opt/repo/mondoo-custom-policies/custom-s3-sg.mql.yaml"
-
-      - name: Run Mondoo Scan with Final Policy Fix
-        run: |
-          docker run --rm \
-          -v $GITHUB_WORKSPACE:/opt/repo \
-          -e AWS_ACCESS_KEY_ID \
-          -e AWS_SECRET_ACCESS_KEY \
-          -e AWS_REGION \
-          mondoo/cnspec:latest \
-          scan aws \
-          --policy-bundle /opt/repo/mondoo-custom-policies/custom-s3-sg.mql.yaml \
-          --output full \
-          --incognito                                
+            scan aws \
+            --policy-bundle /workspace/mondoo-custom-policies/custom-s3-sg.mql.yaml \
+            --output full
+        env:
+          MONDOO_CONFIG: ${{ secrets.MONDOO_CONFIG }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
