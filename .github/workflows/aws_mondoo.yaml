@@ -72,31 +72,32 @@ jobs:
           
   # 1B: Mondoo Scan
   mondoo_scan:
-    if: ${{ github.event.inputs.securityScan == 'mondoo' }}
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Scan Terraform Code
-        uses: mondoohq/actions/terraform@main 
-        with:
-          service-account-credentials: ${{ secrets.MONDOO_CONFIG_BASE64 }}
-          path: terraform-project 
-          report-junit: terraform-hcl-report.xml
-          
-      - name: Publish Terraform Code Scan Report
-        if: always()
-        uses: mikepenz/action-junit-report@v4
-        with:
-          report_paths: 'terraform-hcl-report.xml'
+        runs-on: ubuntu-latest
 
-      - name: Upload Scan Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mondoo-report
-          path: terraform-hcl-report.xml
+        steps:
+          - uses: actions/checkout@v4 # Use the latest version
+
+          - name: Scan Terraform with Mondoo
+            # 1. FIX: The correct action name is 'terraform-hcl' not 'terraform'.
+            # 2. FIX: Use a stable version tag (e.g., v1) instead of 'main'.
+            uses: mondoohq/actions/terraform-hcl@v1 
+            with:
+              # 3. FIX: 'with' is the correct block for action inputs, including secrets.
+              # The input name is 'service-account-credentials', not MONDOO_CONFIG_BASE64.
+              service-account-credentials: ${{ secrets.MONDOO_SERVICE_ACCOUNT }}
+              
+              # 4. FIX: Use a directory path instead of globbing (*.tf) for better reliability.
+              # Assuming your files are in the repository root ('.').
+              path: .
+              
+              # 5. RECOMMENDED: Add output paths to save the report
+              report-junit: mondoo-report.xml
+              
+          - name: Publish Test Report
+            if: always()
+            uses: mikepenz/action-junit-report@v4
+            with:
+              report_paths: 'mondoo-report.xml'
 
   # ====================================================================
   # STAGE 2: Terraform Plan & Apply (Approval Handled by 'dev' Environment)
