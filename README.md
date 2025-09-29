@@ -22,10 +22,9 @@ This diagram illustrates the current automated flow for managing infrastructure 
 <details>
 <summary>Click to view the complete workflow diagram</summary>
 
-```mermaid
-graph TD
-    A[Developer Pushes Code to GitHub] --> B(Workflow Dispatch Trigger);
-    B --> C[Stage 1: Static Code Analysis &#40;Checkov / Mondoo&#41;];
+```
+    [Developer Pushes Code to GitHub] --> B(Workflow Dispatch Trigger);
+    B --> C[Stage 1: Static Code Analysis using Checkov/Mondoo];
     C -- Success --> D[Stage 2: Terraform Init];
     D --> E[Stage 2: Terraform Plan];
     E --> F{Manual Validation / Approval Gate};
@@ -33,9 +32,4 @@ graph TD
     G --> H[Stage 3: Terraform Destroy &#40;Optional Cleanup&#41;];
     C -- Failure --> I(Pipeline Fails: Requires Code Fix);
     F -- Rejected --> I;
-
-    style A fill:#f9f,stroke:#333
-    style C fill:#ccf,stroke:#333
-    style F fill:#ffa,stroke:#333
-    style G fill:#afa,stroke:#333
-    style H fill:#faa,stroke:#333
+'''    
