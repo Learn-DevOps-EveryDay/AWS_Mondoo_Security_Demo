@@ -1,34 +1,32 @@
-name: "Demo Custom AWS Policies"
-description: "Custom checks for demo project: S3 encryption & SG open SSH"
-platform: aws # Explicitly state the platform this policy applies to
-type: infrastructure # Use infrastructure type for IaC/cloud resources
-
-# --- CHECK 1: S3 encryption ---
-checks:
-- id: demo-s3-encryption
-  name: S3 buckets must have default encryption
-  impact: 70
-  control_domain: data-protection
-  expected: Should not find any S3 buckets without default encryption.
+# This top-level is what the 'cnspec scan --policy-bundle' expects.
+policies:
+- name: "Demo Custom AWS Policies"
+  description: "Custom checks for demo project: S3 encryption & SG open SSH"
+  platform: aws 
+  type: infrastructure
   
-  # The MQL must return TRUE if the check PASSES.
-  assert: |
-    aws.s3.buckets.where( defaultEncryption.exists == false ).count == 0
+  # The checks are nested under the policy definition
+  checks:
+  - id: demo-s3-encryption
+    name: S3 buckets must have default encryption
+    impact: 70
+    control_domain: data-protection
+    expected: Should not find any S3 buckets without default encryption.
+    assert: |
+      aws.s3.buckets.where( defaultEncryption.exists == false ).count == 0
 
-# --- CHECK 2: S3 no public ACL ---
-- id: demo-s3-no-public-acl
-  name: S3 buckets must not have public ACLs
-  impact: 80
-  control_domain: access-control
-  expected: Should not find any S3 buckets with public read or write ACLs.
-  assert: |
-    aws.s3.buckets.none( bucket -> bucket.acl in ["public-read", "public-read-write"] )
+  - id: demo-s3-no-public-acl
+    name: S3 buckets must not have public ACLs
+    impact: 80
+    control_domain: access-control
+    expected: Should not find any S3 buckets with public read or write ACLs.
+    assert: |
+      aws.s3.buckets.none( bucket -> bucket.acl in ["public-read", "public-read-write"] )
 
-# --- CHECK 3: SG no world SSH ---
-- id: demo-sg-no-ssh-world
-  name: Security groups must not allow 0.0.0.0/0 on port 22
-  impact: 90
-  control_domain: network-security
-  expected: Should not find security groups with SSH open to the world (0.0.0.0/0).
-  assert: |
-    aws.security_groups.none( sg -> sg.ingress.any( rule -> rule.from_port == 22 && rule.cidr_blocks.any( c -> c == "0.0.0.0/0" ) ) )
+  - id: demo-sg-no-ssh-world
+    name: Security groups must not allow 0.0.0.0/0 on port 22
+    impact: 90
+    control_domain: network-security
+    expected: Should not find security groups with SSH open to the world (0.0.0.0/0).
+    assert: |
+      aws.security_groups.none( sg -> sg.ingress.any( rule -> rule.from_port == 22 && rule.cidr_blocks.any( c -> c == "0.0.0.0/0" ) ) )
