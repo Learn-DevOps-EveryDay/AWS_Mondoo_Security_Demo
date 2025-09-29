@@ -17,19 +17,15 @@ This project is a continuous learning exercise in DevSecOps. My immediate goals 
 
 ## CI/CD & DevSecOps Workflow
 
-This diagram illustrates the current automated flow for managing infrastructure code deployment, integrating security scans, and utilizing manual validation gates.
+This workflow illustrates the current automated flow for managing infrastructure code deployment, integrating security scans, and utilizing manual validation gates.
 
-<details>
-<summary>Click to view the complete workflow diagram</summary>
 
 ```
-    [Developer Pushes Code to GitHub] --> B(Workflow Dispatch Trigger);
-    B --> C[Stage 1: Static Code Analysis using Checkov/Mondoo];
+    A[Developer Pushes Code to GitHub] --> B(Workflow Dispatch Trigger);
+    C[Stage 1: Static Code Analysis using Checkov/Mondoo]:
     C -- Success --> D[Stage 2: Terraform Init];
     D --> E[Stage 2: Terraform Plan];
     E --> F{Manual Validation / Approval Gate};
     F -- Approved --> G[Stage 2: Terraform Apply];
-    G --> H[Stage 3: Terraform Destroy &#40;Optional Cleanup&#41;];
-    C -- Failure --> I(Pipeline Fails: Requires Code Fix);
-    F -- Rejected --> I;
-'''    
+    G --> H[Stage 3: Terraform Destroy];
+```
