@@ -53,7 +53,7 @@ jobs:
         with:
           service-account-credentials: ${{ secrets.MONDOO_SERVICE_ACCOUNT }}
           path: terraform-project
-          output: compact 
+          output: full 
 
   # ====================================================================
   # STAGE 2: Terraform Plan & Apply (Approval Pop-up for Apply)
