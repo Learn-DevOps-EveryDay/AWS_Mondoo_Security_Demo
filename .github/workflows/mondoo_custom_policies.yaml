@@ -17,6 +17,25 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      # Step 1: Debug credentials
+      - name: Debug AWS Env Vars
+        run: |
+          echo "Outside container:"
+          echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
+          echo "AWS_SECRET_ACCESS_KEY length: ${#AWS_SECRET_ACCESS_KEY}"
+
+          echo "Inside container:"
+          docker run --rm \
+            -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            -e AWS_REGION="${{ github.event.inputs.awsRegion }}" \
+            --entrypoint env \
+            mondoo/cnspec:latest | grep AWS_
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # Step 2: Run Mondoo Scan with custom policy
       - name: Run Mondoo Scan with Custom Policy
         run: |
           docker run --rm \
@@ -33,4 +52,3 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           MONDOO_CONFIG: ${{ secrets.MONDOO_CONFIG }}
-
