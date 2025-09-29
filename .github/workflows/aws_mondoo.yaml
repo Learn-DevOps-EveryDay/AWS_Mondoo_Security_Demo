@@ -3,7 +3,7 @@ name: Terraform Infra Pipeline
 permissions:
   contents: read
   checks: write
-  issues: write # Keep this to satisfy the GITHUB_TOKEN requirements for other actions
+  issues: write
 
 on:
   workflow_dispatch:
@@ -24,7 +24,7 @@ on:
 
 jobs:
   # ====================================================================
-  # STAGE 1: IaC Security Scan 
+  # STAGE 1: IaC Security Scan
   # ====================================================================
 
   # Scans run only if NOT a destroy run (to avoid unnecessary compute)
@@ -56,17 +56,15 @@ jobs:
           output: full 
 
   # ====================================================================
-  # STAGE 2: Terraform Plan & Apply (Approval Pop-up for Apply)
+  # STAGE 2: Terraform Plan & Apply
   # ====================================================================
   
   terraform:
     needs: [checkov, mondoo_scan]
     if: ${{ github.event.inputs.enableDestroy != 'true' && always() }} 
     runs-on: ubuntu-latest
-    # 👇 Pop-up for Apply is enforced by the 'dev' environment protection
     environment: 
       name: dev
-    
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -92,17 +90,15 @@ jobs:
           name: terraform-plan-summary
           path: terraform-project/plan-summary.txt
       - name: Terraform Apply
-        # Job pauses here until 'dev' environment is approved.
         run: terraform -chdir=terraform-project apply -auto-approve tfplan
 
   # ====================================================================
-  # STAGE 3: Destroy (Approval Pop-up for Destroy)
+  # STAGE 3: Destroy
   # ====================================================================
   
   destroy:
     if: ${{ github.event.inputs.enableDestroy == 'true' }}
     runs-on: ubuntu-latest
-    # 👇 Pop-up for Destroy is enforced by the 'dev' environment protection
     environment: 
       name: dev
     
@@ -119,9 +115,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Terraform Init
-        run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
-        
-      # The job will pause HERE, showing the approval pop-up due to the 'environment' block above.
-      
+        run: terraform -chdir=terraform-project init -backend-config=backend.tfvars      
       - name: Terraform Destroy
         run: terraform -chdir=terraform-project destroy -auto-approve
