@@ -63,55 +63,52 @@ jobs:
           name: checkov-report
           path: reports/checkov-report.xml
 
-      # - name: Publish Test Report
-      #   if: always()
-      #   uses: mikepenz/action-junit-report@v4
-      #   with:
-      #     report_paths: 'reports/checkov-report.xml'
-      #     include_passed: true
+      - name: Publish Test Report
+        if: always()
+        # 🎯 FIX: Re-enabled the report publisher
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: 'reports/checkov-report.xml'
+          include_passed: true
           
   # 1B: Mondoo Scan
-  mondoo_scan:
-        runs-on: ubuntu-latest
+  # 🎯 FIX: Corrected job structure by de-indenting the entire job
+  mondoo_scan: 
+    if: ${{ github.event.inputs.securityScan == 'mondoo' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Scan Terraform with Mondoo
+        uses: mondoohq/actions/terraform-hcl@v1 
+        with:
+          service-account-credentials: ${{ secrets.MONDOO_SERVICE_ACCOUNT }}
+          path: terraform-project # Using terraform-project for consistency
+          report-junit: mondoo-report.xml
+          
+      - name: Publish Test Report
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: 'mondoo-report.xml'
 
-        steps:
-          - uses: actions/checkout@v4 # Use the latest version
-
-          - name: Scan Terraform with Mondoo
-            # 1. FIX: The correct action name is 'terraform-hcl' not 'terraform'.
-            # 2. FIX: Use a stable version tag (e.g., v1) instead of 'main'.
-            uses: mondoohq/actions/terraform-hcl@v1 
-            with:
-              # 3. FIX: 'with' is the correct block for action inputs, including secrets.
-              # The input name is 'service-account-credentials', not MONDOO_CONFIG_BASE64.
-              service-account-credentials: ${{ secrets.MONDOO_SERVICE_ACCOUNT }}
-              
-              # 4. FIX: Use a directory path instead of globbing (*.tf) for better reliability.
-              # Assuming your files are in the repository root ('.').
-              path: .
-              
-              # 5. RECOMMENDED: Add output paths to save the report
-              report-junit: mondoo-report.xml
-              
-          - name: Publish Test Report
-            if: always()
-            uses: mikepenz/action-junit-report@v4
-            with:
-              report_paths: 'mondoo-report.xml'
+      - name: Upload Scan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mondoo-report
+          path: mondoo-report.xml
 
   # ====================================================================
-  # STAGE 2: Terraform Plan & Apply (Approval Handled by 'dev' Environment)
+  # STAGE 2: Terraform Plan & Apply 
   # ====================================================================
   
   terraform:
     needs: [checkov, mondoo_scan]
     if: always() 
     runs-on: ubuntu-latest
-    # 👇 This links the job to your protected environment
     environment: 
       name: dev
-      # Optional: provides a link to the workflow run in the environment approval box
-      # url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     
     timeout-minutes: 60
     steps:
@@ -133,7 +130,6 @@ jobs:
         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
         
       - name: Terraform Plan
-        # The runner executes Init and Plan successfully
         run: |
           terraform -chdir=terraform-project plan -out=tfplan
           terraform -chdir=terraform-project show -no-color tfplan > terraform-project/plan-summary.txt
@@ -143,15 +139,12 @@ jobs:
         with:
           name: terraform-plan-summary
           path: terraform-project/plan-summary.txt
-
-      # The job pauses HERE, waiting for 'santuCG' to approve the 'dev' environment.
       
       - name: Terraform Apply
-        # This step runs ONLY after environment approval
         run: terraform -chdir=terraform-project apply -auto-approve tfplan
 
   # ====================================================================
-  # STAGE 3: Destroy (Manual Approval Gate BEFORE Destroy)
+  # STAGE 3: Destroy
   # ====================================================================
   
   destroy:
@@ -177,11 +170,10 @@ jobs:
       - name: Terraform Init
         run: terraform -chdir=terraform-project init -backend-config=backend.tfvars
 
-      # 👇 Manual Approval Action for Destroy
       - name: Manual Approval before Destroy
         uses: trstringer/manual-approval@v1
         with:
-          approvers: santuCG # Set specific approver for the destroy action
+          approvers: santuCG
           minimum-approvals: 1
           issue-title: "🚨 Approve Terraform Destroy"
           issue-body: "Approve to proceed with **DESTROYING** all resources in the **dev** environment."
