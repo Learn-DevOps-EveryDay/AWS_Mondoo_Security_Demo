@@ -34,6 +34,19 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          
+      - name: Debug Mondoo Config
+        run: |
+          echo "Outside container:"
+          echo "MONDOO_CONFIG length: ${#MONDOO_CONFIG}"
+
+          echo "Inside container:"
+          docker run --rm \
+            -e MONDOO_CONFIG="$MONDOO_CONFIG" \
+            --entrypoint env \
+            mondoo/cnspec:latest | grep MONDOO_CONFIG
+        env:
+          MONDOO_CONFIG: ${{ secrets.MONDOO_CONFIG }}
 
       # Step 2: Run Mondoo Scan with custom policy
       - name: Run Mondoo Scan with Custom Policy
