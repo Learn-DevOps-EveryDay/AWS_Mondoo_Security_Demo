@@ -17,25 +17,28 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      # Step 1: Prepare Mondoo config securely
       - name: Prepare Mondoo config file
         run: |
-          echo "$MONDOO_CONFIG" > /tmp/mondoo-config.yml
+          mkdir -p /tmp/mondoo-config
+          echo "$MONDOO_CONFIG" > /tmp/mondoo-config/config.yml
         env:
           MONDOO_CONFIG: ${{ secrets.MONDOO_CONFIG }}
 
-      - name: Run Mondoo Scan with Custom Policy
+      # Step 2: Run Mondoo Scan with Custom Policy
+      - name: Run Mondoo Scan
         run: |
           docker run --rm \
             -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
             -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
             -e AWS_REGION="${{ github.event.inputs.awsRegion }}" \
-            -v /tmp/mondoo-config.yml:/root/.config/mondoo/config.yml:ro \
+            -v /tmp/mondoo-config/config.yml:/root/.config/mondoo/config.yml:ro \
             -v $GITHUB_WORKSPACE:/workspace \
             mondoo/cnspec:latest \
             scan aws \
             --policy-bundle /workspace/mondoo-custom-policies/custom-s3-sg.mql.yaml \
+            --services s3,iam   # limit scan to services your IAM user can access
             --output full
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
