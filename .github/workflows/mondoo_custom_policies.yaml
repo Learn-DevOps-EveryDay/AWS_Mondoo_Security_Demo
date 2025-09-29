@@ -17,23 +17,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # Step 1: Prepare Mondoo config securely
       - name: Prepare Mondoo config file
         run: |
-          mkdir -p $GITHUB_WORKSPACE/mondoo-config
-          echo "$MONDOO_CONFIG" > $GITHUB_WORKSPACE/mondoo-config/config.yml
+          echo "$MONDOO_CONFIG" > /tmp/mondoo-config.yml
         env:
           MONDOO_CONFIG: ${{ secrets.MONDOO_CONFIG }}
 
-      # Step 2: Run Mondoo scan with custom policy
       - name: Run Mondoo Scan with Custom Policy
         run: |
           docker run --rm \
             -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
             -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
             -e AWS_REGION="${{ github.event.inputs.awsRegion }}" \
+            -v /tmp/mondoo-config.yml:/root/.config/mondoo/config.yml:ro \
             -v $GITHUB_WORKSPACE:/workspace \
-            -v $GITHUB_WORKSPACE/mondoo-config/config.yml:/root/.config/mondoo/config.yml:ro \
             mondoo/cnspec:latest \
             scan aws \
             --policy-bundle /workspace/mondoo-custom-policies/custom-s3-sg.mql.yaml \
@@ -41,3 +38,4 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
