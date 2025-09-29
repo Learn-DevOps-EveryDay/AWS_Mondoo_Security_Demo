@@ -1,47 +1,39 @@
-name: Mondoo Custom AWS Scan (Bash Inline)
+name: "Demo Custom AWS Policies"
+uid: demo-aws-security-policy # <--- CRITICAL FIX: Ensures the top-level policy is valid.
+description: "Custom checks for demo project: S3 encryption & SG open SSH"
+policies:
+  - uid: demo-s3-encryption
+    title: "S3 buckets must have default encryption"
+    severity: high
+    impact: 70
+    resource: aws.s3.bucket # <--- Fixes: Asset doesn't support any policies
+    mql: |
+      aws.s3.buckets.where( defaultEncryption.exists == false ).count == 0
+    queries:
+      - uid: aws-s3-buckets
+        title: "List S3 buckets"
+        mql: aws.s3.buckets
 
-on:
-  workflow_dispatch:
-    inputs:
-      awsRegion:
-        description: 'AWS Region to scan'
-        required: true
-        default: 'us-east-1' 
+  - uid: demo-s3-no-public-acl
+    title: "S3 buckets must not have public ACLs"
+    severity: high
+    impact: 80
+    resource: aws.s3.bucket # <--- Fixes: Asset doesn't support any policies
+    mql: |
+      aws.s3.buckets.none( bucket -> bucket.acl in ["public-read", "public-read-write"] )
+    queries:
+      - uid: aws-s3-buckets
+        title: "List S3 buckets"
+        mql: aws.s3.buckets
 
-permissions:
-  contents: read
-
-jobs:
-  mondoo_aws_scan:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      # 1. Install cnspec CLI
-      - name: Install Mondoo cnspec
-        run: |
-          # Download and install the cnspec binary directly
-          curl -sS https://install.mondoo.com/sh | sh
-          # Ensure cnspec is in the path
-          echo "$HOME/.mondoo/bin" >> $GITHUB_PATH
-
-      # 2. Configure AWS Credentials
-      # This step authenticates the runner to AWS using repository secrets.
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ github.event.inputs.awsRegion }}
-          
-      # 3. Run Mondoo Scan with Custom Policy via Inline Bash
-      - name: Run Mondoo Scan with Custom Policy
-        # Use a simple 'run' block to execute the cnspec command directly.
-        # Since cnspec is installed locally, the policy path is relative to the repo root.
-        run: |
-          cnspec scan aws \
-            --policy-bundle ./mondoo-custom-policies/custom-s3-sg.mql.yaml \
-            --output full \
-            --incognito
-        # Note: The policy file path is now relative to the repository root (e.g., ./mondoo-custom-policies/...)
+  - uid: demo-sg-no-ssh-world
+    title: "Security groups must not allow 0.0.0.0/0 on port 22"
+    severity: critical
+    impact: 90
+    resource: aws.security_group # <--- Fixes: Asset doesn't support any policies
+    mql: |
+      aws.security_groups.none( sg -> sg.ingress.any( rule -> rule.from_port == 22 && rule.cidr_blocks.any( c -> c == "0.0.0.0/0" ) ) )
+    queries:
+      - uid: aws-sgs
+        title: "List Security Groups"
+        mql: aws.security_groups
