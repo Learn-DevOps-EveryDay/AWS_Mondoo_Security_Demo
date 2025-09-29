@@ -19,8 +19,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Configure AWS Credentials
-      # This step authenticates the runner to AWS using repository secrets.
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -28,11 +26,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ github.event.inputs.awsRegion }}
 
-      # 2. Run Mondoo Scan with Custom Policy
-      # This executes the scan using the official Docker image for robustness.
-      - name: Scan AWS Account with Custom Policy
+      # 🎯 STEP A: DIAGNOSTIC CHECK
+      - name: Verify Policy File Exists in Container
         run: |
-          # $GITHUB_WORKSPACE is the root of your checked-out repository.
+          echo "Attempting to list the file at the specified path inside the container..."
+          # This command must succeed before the scan can work.
+          docker run --rm \
+            -v $GITHUB_WORKSPACE:/opt/repo \
+            mondoo/cnspec:latest \
+            ls -l /opt/repo/mondoo-custom-policies/custom-s3-sg.mql.yaml
+
+      # 🎯 STEP B: RUN SCAN
+      - name: Run Mondoo Scan with Custom Policy
+        run: |
           docker run --rm \
             -v $GITHUB_WORKSPACE:/opt/repo \
             -e AWS_ACCESS_KEY_ID \
