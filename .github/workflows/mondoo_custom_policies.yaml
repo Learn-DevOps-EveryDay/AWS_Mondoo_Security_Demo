@@ -29,7 +29,7 @@ jobs:
       # 2. Run Mondoo Scan with Custom Policy
       - name: Scan AWS Account with Custom Policy
         # Use the generic Mondoo cnspec action for scanning live cloud assets
-        uses: mondoohq/cnspec-action@main 
+        uses: mondoohq/mondoo-action@v1 
         with:
           
           # Target the AWS cloud provider
