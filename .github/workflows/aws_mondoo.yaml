@@ -80,7 +80,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Scan Terraform with Mondoo
-        uses: mondoohq/actions/terraform-hcl@v1 
+        uses: mondoohq/actions/terraform-hcl@main 
         with:
           service-account-credentials: ${{ secrets.MONDOO_SERVICE_ACCOUNT }}
           path: terraform-project # Using terraform-project for consistency
