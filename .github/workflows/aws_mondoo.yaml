@@ -63,12 +63,12 @@ jobs:
           name: checkov-report
           path: reports/checkov-report.xml
 
-      - name: Publish Test Report
-        if: always()
-        uses: mikepenz/action-junit-report@v4
-        with:
-          report_paths: 'reports/checkov-report.xml'
-          include_passed: true
+      # - name: Publish Test Report
+      #   if: always()
+      #   uses: mikepenz/action-junit-report@v4
+      #   with:
+      #     report_paths: 'reports/checkov-report.xml'
+      #     include_passed: true
           
   # 1B: Mondoo Scan
   mondoo_scan:
@@ -103,6 +103,8 @@ jobs:
   # ====================================================================
   
   terraform:
+    needs: [checkov, mondoo_scan]
+    if: always() 
     runs-on: ubuntu-latest
     # 👇 This links the job to your protected environment
     environment: 
