@@ -32,12 +32,12 @@ jobs:
             -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
             -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
             -e AWS_REGION="${{ github.event.inputs.awsRegion }}" \
-            -v /tmp/mondoo-config/config.yml:/root/.config/mondoo/config.yml:ro \
+            -v /tmp/mondoo-config.yml:/root/.config/mondoo/config.yml:ro \
             -v $GITHUB_WORKSPACE:/workspace \
             mondoo/cnspec:latest \
             scan aws \
             --policy-bundle /workspace/mondoo-custom-policies/custom-s3-sg.mql.yaml \
-            --services s3,iam   # limit scan to services your IAM user can access
+            --discover s3-buckets,iam-users,iam-groups \
             --output full
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
