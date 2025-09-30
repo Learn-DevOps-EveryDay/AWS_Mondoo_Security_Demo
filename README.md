@@ -102,4 +102,4 @@ This pipeline is executed using `workflow_dispatch`, allowing the user to select
 
         # Destroy resources (cleanup)
         terraform destroy -auto-approve
-        ```
+    ```
