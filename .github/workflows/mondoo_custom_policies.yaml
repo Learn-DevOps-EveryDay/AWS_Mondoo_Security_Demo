@@ -36,7 +36,7 @@ jobs:
             -v $GITHUB_WORKSPACE:/workspace \
             mondoo/cnspec:latest \
             scan aws \
-            --policy-bundle /workspace/mondoo-custom-policies/s3-policy-bundle.mql.yaml \
+            --policy-bundle /workspace/mondoo-custom-policies/s3-policy.mql.yaml \
             --discover s3-buckets,iam-users,iam-groups \
             --output full
         env:
