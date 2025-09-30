@@ -63,9 +63,9 @@ jobs:
     needs: [checkov, mondoo_scan]
     if: ${{ github.event.inputs.enableDestroy != 'true' && always() }} 
     runs-on: ubuntu-latest
-    environment: 
-      name: dev
-    timeout-minutes: 60
+    # environment: 
+    #   name: dev
+    # timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - name: Setup Terraform
@@ -99,9 +99,8 @@ jobs:
   destroy:
     if: ${{ github.event.inputs.enableDestroy == 'true' }}
     runs-on: ubuntu-latest
-    environment: 
-      name: dev
-    
+    # environment: 
+    #   name: dev
     steps:
       - uses: actions/checkout@v4
       - name: Setup Terraform

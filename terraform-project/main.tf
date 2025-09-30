@@ -18,15 +18,11 @@ provider "aws" {
   region = var.aws_region
 }
 
-# resource "random_id" "rand" {
-#   byte_length = 4
-# }
 
 locals {
   project     = "dt-sec"
   environment = var.environment
   region_code = replace(var.aws_region, "-", "")
-  # unique_id   = random_id.rand.hex
 
   name_prefix = "${local.project}-${local.region_code}-${local.environment}"
 
@@ -75,20 +71,20 @@ module "s3" {
 # Data sources
 data "aws_availability_zones" "available" {}
 
-# EC2
-# module "ec2" {
-#   source        = "./modules/ec2"
-#   ami           = "ami-0a716d3f3b16d290c"
-#   instance_type = var.instance_type
-#   subnet_id     = module.subnet.subnet_id
-#   sg_ids        = [module.sg.sg_id]
-#   name          = "${local.name_prefix}-ec2-web"
-#   tags          = local.tags
-# }
-
-resource "aws_instance" "example" {
+#EC2
+module "ec2" {
+  source        = "./modules/ec2"
   ami           = "ami-0a716d3f3b16d290c"
-  instance_type = "t3.micro"
-
-  tags = local.tags
+  instance_type = var.instance_type
+  subnet_id     = module.subnet.subnet_id
+  sg_ids        = [module.sg.sg_id]
+  name          = "${local.name_prefix}-ec2-web"
+  tags          = local.tags
 }
+
+# resource "aws_instance" "example" {
+#   ami           = "ami-0a716d3f3b16d290c"
+#   instance_type = "t3.micro"
+
+#   tags = local.tags
+# }

@@ -1,29 +1,3 @@
-variable "vpc_id" {
-  type = string
-}
-variable "ingress_rules" {
-  type = list(object({
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    cidr_blocks = list(string)
-  }))
-}
-variable "egress_rules" {
-  type = list(object({
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    cidr_blocks = list(string)
-  }))
-}
-variable "tags" {
-  type = map(string)
-}
-variable "name" {
-  type = string
-}
-
 resource "aws_security_group" "this" {
   name        = var.name
   description = "Security group rules"
@@ -50,8 +24,4 @@ resource "aws_security_group" "this" {
   }
 
   tags = merge(var.tags, { Name = var.name })
-}
-
-output "sg_id" {
-  value = aws_security_group.this.id
 }
