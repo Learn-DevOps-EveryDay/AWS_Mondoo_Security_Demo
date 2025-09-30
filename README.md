@@ -2,7 +2,7 @@
 
 ## Project Goal: Shift-Left DevSecOps with Terraform
 
-This project demonstrates the integration of **security-as-code** principles into the **AWS infrastructure lifecycle**. The core focus is on performing **static security analysis** and **policy compliance checks** *before* the code is provisioned, using **Terraform** for IaC and **Checkov & Mondoo/cnspec** for security assessment.
+This project demonstrates the integration of **security-as-code** principles into the **AWS infrastructure lifecycle**. The core focus is on performing **static security analysis** and **policy compliance checks** *before* the code is provisioned, using **Terraform** for IaC using **Checkov & Mondoo/cnspec** for security assessment.
 
 ---
 
@@ -11,7 +11,7 @@ This project demonstrates the integration of **security-as-code** principles int
 
 1. AWS resources using Terraform scripts and modules.
 2. Pipeline as code using GitHub Actions to execute Terraform modules to provision as well as destroy aws resources.
-3. Terraform Static Code Analysis using Checov.
+3. Terraform Static Code Analysis using Checov/Cnspec.
 4. Terraform Compliance testing.
 
 ---
