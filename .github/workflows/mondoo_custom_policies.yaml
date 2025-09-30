@@ -26,13 +26,13 @@ jobs:
           sudo apt update
           sudo apt install -y mondoo
 
-      # # Step 2: Prepare Mondoo config securely
-      # - name: Setup Mondoo config
-      #   run: |
-      #     mkdir -p ~/.config/mondoo
-      #     echo "$MONDOO_CONFIG" > ~/.config/mondoo/config.yml
-      #   env:
-      #     MONDOO_CONFIG: ${{ secrets.MONDOO_CONFIG }}
+      # Step 2: Prepare Mondoo config securely
+      - name: Setup Mondoo config
+        run: |
+          mkdir -p ~/.config/mondoo
+          echo "$MONDOO_CONFIG" > ~/.config/mondoo/config.yml
+        env:
+          MONDOO_CONFIG: ${{ secrets.MONDOO_CONFIG }}
 
       # Step 3: Run Mondoo Scan with Custom S3 Policy
       - name: Run Mondoo Scan
