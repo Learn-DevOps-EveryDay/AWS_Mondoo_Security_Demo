@@ -1,81 +1,23 @@
 policies:
-  - uid: aws-s3-security
-    name: AWS S3 Security Baseline
-    version: "1.0.1" # Updated version due to MQL changes
-    tags:
-      mondoo.com/category: cloud
-      mondoo.com/platform: aws/s3
-      mondoo.com/service: s3
-    scoring_system: highest impact
-    authors:
-      - name: Mondoo
-        email: hello@mondoo.com
-
+  - uid: aws-s3-security                        # A unique identifier for the policy
+    name: AWS S3 Versioning Policy              # A descriptive name for the policy
+    version: "1.0.1"                            # The current version of the policy.
+    scoring_system: highest impact              # How Mondoo calculates the score for an asset: average or highest impact.
+    authors:                                    # The person or entity to credit for writing the policy, and email where they can be reached.
+      - name: Santosh Nagaraj
+        email: san.n1597@gmail.com
+    docs: 
+      desc: | 
+        Check whether S3 buckets have versioning enabled.
     groups:
-      - title: S3 Bucket Security Checks
-        checks:
-          # CHECK 1: Ensure S3 Block Public Access is enforced at the Account-Level
-          - uid: s3-01
-            title: Account-level Public Access Block must be fully enabled
-            mql: aws.s3control.accountPublicAccessBlock.all(
-                   BlockPublicAcls == true &&
-                   IgnorePublicAcls == true &&
-                   BlockPublicPolicy == true &&
-                   RestrictPublicBuckets == true
-                 )
-            impact: 100
-
-          # CHECK 2: Ensure all S3 Buckets enforce Server-Side Encryption
-          # Uses the corrected encryption path: bucket.encryption.rule...
-          - uid: s3-02
-            title: All S3 buckets must have default encryption enabled (SSE-S3 or SSE-KMS)
-            mql: aws.s3.buckets.all( encryption.rule.applyServerSideEncryptionByDefault.isNotNil )
-            impact: 80
-
-          # CHECK 3: Ensure all S3 buckets have versioning enabled
-          # The field 'versioning' is typically correct.
-          - uid: s3-03
+      - title: groups1
+        checks:                                # An MQL query that also makes an assertion and produces a score is called a check.
+          - uid: s3-01  
             title: All S3 buckets must have versioning enabled
-            mql: aws.s3.buckets.all( versioning.status == 'Enabled' )
-            impact: 60
+            mql: aws.s3.buckets.all( versioning.status == 'Enabled' )  # MQL assertion to check if versioning is enabled on all s3.
+            impact: 60                        #How important (on a scale from 0 to 100) the check is in the scope of the entire policy. 
 
-          # Referenced query example (shared check for a single bucket type)
-          - uid: s3-log-bucket-encryption
-
-        queries:
-          # QUERY 1: Gather an inventory of all S3 buckets and public access status
-          # Removing 'region' as it was causing a compile error; querying available fields.
-          - uid: s3-d-1
-            title: List all S3 buckets and public access status
-            mql: |
-              aws.s3.buckets { 
-                name 
-                publicAccessBlock.blockPublicAcls 
-                versioning.status 
-              }
-
-          # QUERY 2: Gather details on unencrypted buckets for quick reporting
-          # Corrected encryption path for the where clause and output fields.
-          - uid: s3-d-2
-            title: Identify S3 buckets without default encryption
-            mql: |
-              aws.s3.buckets.where( 
-                encryption.rule.applyServerSideEncryptionByDefault.isNil
-              ) {
-                name
-                creationDate
-              }
-
-        filters:
-          - mql: asset.family == 'aws'
-
-# ----------------------------------------------------------------------
-queries:
-  # REUSABLE CHECK: Ensure S3 buckets used for logging are also encrypted
-  # Corrected encryption path.
-  - uid: s3-log-bucket-encryption
-    title: Log buckets must have default encryption enabled
-    filters: 
-      - mql: aws.s3.buckets.where( name == /log/ )
-    mql: aws.s3.buckets.where( name == /log/ ).all( encryption.rule.applyServerSideEncryptionByDefault.isNotNil )
-    impact: 70
+    queries:      # Optional, but useful for reusable checks | It can be referencd in multiple checks ($s3-version-1-query) 
+      - uid: s3-version-1-query
+        title: All S3 buckets must have versioning enable
+        mql: aws.s3.buckets.all( versioning.status == 'Enabled' )

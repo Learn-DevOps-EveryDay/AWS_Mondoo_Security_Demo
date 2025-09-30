@@ -43,7 +43,6 @@ This pipeline is executed using `workflow_dispatch`, allowing the user to select
 | **Trigger** | (N/A) | `on: workflow_dispatch` | Developer triggers run and selects security/action. |
 | **Stage 1: Security Scan** | `checkov` or `mondoo_scan` | Runs **ONLY IF** `enableDestroy` is `false`. | Static analysis of IaC code. Failure requires code fix. |
 | **Stage 2: Plan & Apply** | `terraform` | Runs **ONLY IF** `enableDestroy` is `false`. | **Init**, **Plan** (`tfplan`), **Apply** (`apply -auto-approve tfplan`). |
-| **Manual Validation** | (Implicit) | Between Plan and Apply. | Requires manual review of the `plan-summary.txt` artifact. |
 | **Stage 3: Destroy** | `destroy` | Runs **ONLY IF** `enableDestroy` is `true`. | **Init**, then **Destroy** (`destroy -auto-approve`) for mandatory cleanup. |
 
 ---
@@ -83,3 +82,24 @@ This pipeline is executed using `workflow_dispatch`, allowing the user to select
     # Mondoo/cnspec
     cnspec scan terraform terraform-project/
     ```
+
+3. **Terraform Lifecycle**
+    ```bash
+        # Format Terraform code
+        terraform fmt -recursive
+
+        # Initialize Terraform
+        terraform init
+
+        # Validate Terraform code
+        terraform validate
+
+        # Preview the execution plan
+        terraform plan
+
+        # Apply the changes
+        terraform apply -auto-approve
+
+        # Destroy resources (cleanup)
+        terraform destroy -auto-approve
+        ```
